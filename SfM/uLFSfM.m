@@ -14,29 +14,15 @@ matchesInit = matchesN;
 lfFeaturesInitRel = lfFeatures;
 visMatrixInitRel = visMatrix;
 
-% not use if I should use this for now?
-% tgv = Xout(1:3, 4) ./ norm(Xout(1:3, 4)) * ( norm(X(1:3, 4)) + norm(Xout(1:3, 4)))/2;
+
 
 [pts3d, pts3D, ids, reprojectionErrs, pts3dIds, pts, cols, pc] = initialiseStructure(matchesN, poses, f1, f2, K, subLfExt, lf{f2}, reprTh, pts3dIds, 2, getDesc);
-%
-%
-% figure;
-% hold on; grid on;
-% 
-% plotCamera('Orientation', eye(3), 'Location', zeros(3, 1), 'Size', cameraSize, 'Color', 'red')
-% plotCamera('Orientation', R', 'Location', t, 'Size', cameraSize, 'Color', 'magenta')
-% plotCamera('Orientation', Rgv', 'Location', tgv, 'Size', cameraSize, 'Color', 'blue')
+
 
 pts3dIdsInit = pts3dIds;
 ptsInit = pts;
 colsInit = cols;
 
-% pcshow(pc, 'MarkerSize', 40)
-% axis equal
-% drawnow();
-% VI. Incremental Reconstruction
-
-%
 registered = [f1 f2];
 pts = ptsInit;
 pts3dIds = pts3dIdsInit;
@@ -51,14 +37,9 @@ badFrames = [];
 numRegistered = 0;
 bundleBatch = 5;
 looped = 0;
-%
-% dont forget to check negative depth points and discard them.
-%
+
 while (~isempty(queryImages))
 
-%     if (numel(registered) > 210 )
-%         bundleBatch = 3;
-%     end
     
     [pyramids, nextFrame] = selectNextView(pts3dIds, visMatrix, visBool, width, height, pyramidRes, queryImages, frames, centFs);
     
@@ -83,10 +64,7 @@ while (~isempty(queryImages))
         notRegistered = [notRegistered nextFrame];
         notRegistered = unique(notRegistered);
         fprintf('Could not register frame %d \n', nextFrame);
-%         queryImages = frames(~ismember(frames, union(registered, notRegistered)));
         queryImages = frames(~ismember(frames, registered));
-
-%         queryImages = queryImages(~ismember(queryImages, nextFrame));
         queryImages = queryImages(~ismember(queryImages, notRegistered));
         queryImages = queryImages(~ismember(queryImages, badFrames));
 
@@ -95,9 +73,6 @@ while (~isempty(queryImages))
     poses{nextFrame} = [Rw tw];
     [visMatrix, visBool, lfFeatures] = removeOutliersLfSfMAbsPose(visMatrix, visBool, ptsW, rays3, inlAbs, idsq, poses, nextFrame, lfFeatures, K );
     
-%     plotCamera('Orientation', Rh', 'Location',  th, 'Size', cameraSize, 'Color', 'red', 'Label', num2str(nextFrame) )
-    % drawnow;
-    % pause();
     
     % now try to reconstruct 3D points
     for regId = registered
@@ -112,11 +87,6 @@ while (~isempty(queryImages))
         end
         [visBool, visMatrix, poses, pts, cols, pts3dIds, lfFeatures] = incrementalMapper(lf{nextFrame}, visBool, visMatrix, regId, nextFrame, lfFeatures, centDes, K, subLfExt, poses, pts3dIds, pts, cols, reprTh, registered );
        
-                
-%         pc = pointCloud( pts', 'Color', uint8(cols));
-%         pcshow(pc, 'MarkerSize', 40);
-%         drawnow;
-        %     pause();
     end
     
     [visMatrix, visBool, lfFeatures] = filterRegisteredFrameFeatures(visMatrix, visBool, pts, pts3dIds, poses, nextFrame, lfFeatures, K, subLfExt);
@@ -136,13 +106,10 @@ while (~isempty(queryImages))
     fprintf('Registered images: %d \n', numel(unique(registered)));
     if (numRegistered == bundleBatch)
         fprintf('Registered %d new images, calling global Bundle Adjustment...\n', bundleBatch);
-%         bundleAdjustmentHelper(pts, visMatrix, poses, lfFeatures, registered, notRegistered, pts3dIds, posesStr, ptsStr);
-%         [poses, pts] = lfBundleAdjustment(baExe, intrStr, lfIntrStr, ptsStr, posesStr, poses, registered);
         [posesMat, ptsCellBA] = bundleAdjustmentHelper(pts, visMatrix, poses, lfFeatures, registered, notRegistered, pts3dIds);
         [poses, pts] = lfBundleAdjustmentMEX(intrStr, lfIntrStr, ptsCellBA, posesMat, poses, registered);        
         numRegistered = 0;
     end
-%     queryImages = [queryImages notRegistered];    
 end
 
 %%Final Global Bundle Adjustment
