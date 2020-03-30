@@ -32,8 +32,6 @@ lfDescriptors = cell(size(lf));
 for x = 1:size(lf, 1)
     for y = 1:size(lf, 2)
         
-%         [lfFeatures{x, y}, lfDescriptors{x, y}] = vl_sift(im2single(rgb2gray(lf{x, y})));
-
 %       more dense features
         [lfFeatures{x, y}, lfDescriptors{x, y}] = vl_covdet(im2single(rgb2gray(lf{x, y})), 'peakThreshold', peakThresh, 'MaxNumOrientations', 4);   
         lfDescriptors{x, y} = rootSift(lfDescriptors{x, y});
